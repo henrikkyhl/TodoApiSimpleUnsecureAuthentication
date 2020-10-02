@@ -7,6 +7,7 @@ using System.Linq;
 namespace TodoApi.Controllers
 {
     [Route("/token")]
+    [ApiController]
     public class TokenController : Controller
     {
         private IRepository<User> repository;

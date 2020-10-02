@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using TodoApi.Data;
 using Microsoft.EntityFrameworkCore;
@@ -9,20 +10,20 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using TodoApi.Helpers;
 using System;
-
+using Microsoft.OpenApi.Models;
+using System.Reflection;
+using System.IO;
 
 namespace TodoApi
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-            Environment = env;
         }
 
         public IConfiguration Configuration { get; }
-        public IHostingEnvironment Environment { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -49,20 +50,8 @@ namespace TodoApi
                 };
             });
 
-            // Add CORS
-            services.AddCors();
-
-            if (Environment.IsDevelopment())
-            {
-                // In-memory database:
-                services.AddDbContext<TodoContext>(opt => opt.UseInMemoryDatabase("TodoList"));
-            }
-            else
-            {
-                // Azure SQL database:
-                services.AddDbContext<TodoContext>(opt =>
-                         opt.UseSqlServer(Configuration.GetConnectionString("defaultConnection")));
-            }
+            // In-memory database:
+            services.AddDbContext<TodoContext>(opt => opt.UseInMemoryDatabase("TodoList"));
 
             // Register repositories for dependency injection
             services.AddScoped<IRepository<TodoItem>, TodoItemRepository>();
@@ -77,11 +66,36 @@ namespace TodoApi
             // "secretBytes" array, which is used to generate a key for signing JWT tokens,
             services.AddSingleton<IAuthenticationHelper>(new AuthenticationHelper(secretBytes));
 
-            services.AddMvc();
+            // Configure the default CORS policy.
+            services.AddCors(options =>
+                options.AddDefaultPolicy(
+                    builder =>
+                    {
+                        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                    })
+            );
+
+            //Register the Swagger generator using Swashbuckle.
+           services.AddSwaggerGen(c =>
+           {
+               c.SwaggerDoc("v1", new OpenApiInfo
+               {
+                   Version = "v1",
+                   Title = "ToDo API",
+                   Description = "A simple example ASP.NET Core Web API"
+               });
+
+                // Set the comments path for the Swagger JSON and UI.
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+               var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+               c.IncludeXmlComments(xmlPath);
+           });
+
+            services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             // Initialize the database.
             using (var scope = app.ApplicationServices.CreateScope())
@@ -101,20 +115,24 @@ namespace TodoApi
             {
                 app.UseDeveloperExceptionPage();
             }
-            else
-            {
-                app.UseHsts();
-            }
 
             app.UseHttpsRedirection();
 
-            // Enable CORS (must precede app.UseMvc()):
-            app.UseCors(builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            app.UseRouting();
+
+            // Enable CORS (after UseRouting and before UseAuthorization).
+            app.UseCors();
 
             // Use authentication
             app.UseAuthentication();
 
-            app.UseMvc();
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
+
         }
     }
 }

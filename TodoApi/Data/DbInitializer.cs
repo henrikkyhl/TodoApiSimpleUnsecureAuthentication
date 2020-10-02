@@ -9,9 +9,14 @@ namespace TodoApi.Data
         // This method will create and seed the database.
         public void Initialize(TodoContext context)
         {
-            // Create the database, if it does not already exists. If the database
-            // already exists, no action is taken (and no effort is made to ensure it
-            // is compatible with the model for this context).
+            // Delete the database, if it already exists. I do this because an
+            // existing database may not be compatible with the entity model,
+            // if the entity model was changed since the database was created.
+            // This operation has no effect for an in-memory database.
+            context.Database.EnsureDeleted();
+
+            // Create the database, if it does not already exists. This operation
+            // has no effect for an in-memory database.
             context.Database.EnsureCreated();
 
             // Look for any TodoItems
