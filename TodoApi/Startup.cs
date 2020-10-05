@@ -64,7 +64,8 @@ namespace TodoApi
             // injection. It must be registered as a singleton service. The AuthenticationHelper
             // is instantiated with a parameter. The parameter is the previously created
             // "secretBytes" array, which is used to generate a key for signing JWT tokens,
-            services.AddSingleton<IAuthenticationHelper>(new AuthenticationHelper(secretBytes));
+            services.AddSingleton<IAuthenticationHelper>(new
+                AuthenticationHelper(secretBytes));
 
             // Configure the default CORS policy.
             services.AddCors(options =>
