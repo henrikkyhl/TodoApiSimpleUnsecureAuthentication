@@ -92,7 +92,7 @@ namespace TodoApi
                c.IncludeXmlComments(xmlPath);
            });
 
-            services.AddControllers();
+           services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -107,6 +107,15 @@ namespace TodoApi
                 var dbInitializer = services.GetService<IDbInitializer>();
                 dbInitializer.Initialize(dbContext);
             }
+
+            // Enable middleware to serve generated Swagger as a JSON endpoint.
+            app.UseSwagger();
+
+            // Enable middleware to serve SwaggerUI, specifying the Swagger JSON endpoint.
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+            });
 
             // For convenience, I want detailed exception information always. However, this statement should
             // be removed, when the application is released.
